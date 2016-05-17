@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+      xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/menu_accept"
+        android:title="保存"
+        app:showAsAction="always|withText"/>
+
+    <item
+        android:id="@+id/menu_cancel"
+        android:title="取消"
+        app:showAsAction="always|withText"/>
+
+</menu>

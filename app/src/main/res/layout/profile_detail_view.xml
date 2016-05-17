@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+            xmlns:app="http://schemas.android.com/apk/res-auto"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:animateLayoutChanges="true"
+        android:orientation="vertical"
+        android:padding="10dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="ip地址："/>
+
+
+        <android.support.design.widget.TextInputEditText
+            android:id="@+id/gateway"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="ip地址"
+            android:inputType="textNoSuggestions"
+            android:singleLine="true"
+            android:text="45.79.187.82"/>
+
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="4dp"
+            android:text="连接类型"
+            android:textSize="12sp"/>
+
+        <Spinner
+            android:id="@+id/vpn_type"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:entries="@array/vpn_types"
+            android:spinnerMode="dropdown"/>
+
+        <include
+            android:id="@+id/tnc_notice"
+            layout="@layout/two_line_button"
+            android:visibility="gone"/>
+
+        <LinearLayout
+            android:id="@+id/username_password_group"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <org.strongswan.android.ui.view.TextInputLayoutHelper
+                android:id="@+id/username_wrap"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <android.support.design.widget.TextInputEditText
+                    android:id="@+id/username"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="用户名"
+                    android:inputType="textNoSuggestions"
+                    android:singleLine="true"
+                    android:text="thell"/>
+
+            </org.strongswan.android.ui.view.TextInputLayoutHelper>
+
+            <org.strongswan.android.ui.view.TextInputLayoutHelper
+                android:id="@+id/password_wrap"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp">
+
+                <android.support.design.widget.TextInputEditText
+                    android:id="@+id/password"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="密码"
+                    android:singleLine="true"
+                    android:text="thellpsw"/>
+
+            </org.strongswan.android.ui.view.TextInputLayoutHelper>
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/user_certificate_group"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="4dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="4dp"
+                android:layout_marginTop="4dp"
+                android:text="使用证书"
+                android:textSize="12sp"/>
+
+            <include
+                android:id="@+id/select_user_certificate"
+                layout="@layout/two_line_button"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="4dp"
+                android:layout_marginTop="4dp"
+                android:text="@string/profile_user_select_id_label"
+                android:textSize="12sp"/>
+
+            <Spinner
+                android:id="@+id/select_user_id"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:spinnerMode="dropdown"/>
+
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="4dp"
+            android:text="CA证书"
+            android:textSize="12sp"/>
+
+        <CheckBox
+            android:id="@+id/ca_auto"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="自动选择CA"/>
+
+        <include
+            android:id="@+id/select_certificate"
+            layout="@layout/two_line_button"/>
+
+        <org.strongswan.android.ui.view.TextInputLayoutHelper
+            android:id="@+id/name_wrap"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp">
+
+            <MultiAutoCompleteTextView
+                android:id="@+id/name"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:completionThreshold="1"
+                android:hint="配置文件名字(可选)"
+                android:text="美国"
+                android:inputType="textNoSuggestions"
+                android:singleLine="true"/>
+
+        </org.strongswan.android.ui.view.TextInputLayoutHelper>
+
+        <CheckBox
+            android:id="@+id/show_advanced"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="显示高级设置"/>
+
+        <LinearLayout
+            android:id="@+id/advanced_settings"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="4dp"
+                android:layout_marginTop="10dp"
+                android:text="高级设置"
+                android:textSize="20sp"/>
+
+            <org.strongswan.android.ui.view.TextInputLayoutHelper
+                android:id="@+id/remote_id_wrap"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                app:helper_text="@string/profile_remote_id_hint">
+
+                <MultiAutoCompleteTextView
+                    android:id="@+id/remote_id"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:completionThreshold="1"
+                    android:hint="@string/profile_remote_id_label"
+                    android:inputType="textNoSuggestions"
+                    android:singleLine="true"/>
+
+            </org.strongswan.android.ui.view.TextInputLayoutHelper>
+
+            <org.strongswan.android.ui.view.TextInputLayoutHelper
+                android:id="@+id/mtu_wrap"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:helper_text="@string/profile_mtu_hint">
+
+                <android.support.design.widget.TextInputEditText
+                    android:id="@+id/mtu"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="@string/profile_mtu_label"
+                    android:inputType="number|textNoSuggestions"
+                    android:singleLine="true"/>
+
+            </org.strongswan.android.ui.view.TextInputLayoutHelper>
+
+            <org.strongswan.android.ui.view.TextInputLayoutHelper
+                android:id="@+id/port_wrap"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:helper_text="@string/profile_port_hint">
+
+                <android.support.design.widget.TextInputEditText
+                    android:id="@+id/port"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="@string/profile_port_label"
+                    android:inputType="number|textNoSuggestions"
+                    android:singleLine="true"/>
+
+            </org.strongswan.android.ui.view.TextInputLayoutHelper>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="4dp"
+                android:layout_marginTop="10dp"
+                android:text="@string/profile_split_tunneling_label"
+                android:textSize="12sp"/>
+
+            <CheckBox
+                android:id="@+id/split_tunneling_v4"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/profile_split_tunnelingv4_title"/>
+
+            <CheckBox
+                android:id="@+id/split_tunneling_v6"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/profile_split_tunnelingv6_title"/>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</ScrollView>
