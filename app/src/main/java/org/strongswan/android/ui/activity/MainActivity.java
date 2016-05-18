@@ -82,25 +82,28 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 
             if (START_PROFILE.equals(getIntent().getAction())) {
                 //绑定服务成功后，执行连接
-                startVpnProfile(getIntent());
+                startVpnProfile1(getIntent());
             }
         }
     };
 
+    @SuppressWarnings("ConstantConditions")
     @Override
     public void onCreate(Bundle savedInstanceState) {
         requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
-
+        //初始化ActionBar
         ActionBar bar = getSupportActionBar();
         bar.setDisplayShowHomeEnabled(true);
         bar.setDisplayShowTitleEnabled(false);
         bar.setIcon(R.drawable.ic_launcher);
 
+        //绑定状态服务
         this.bindService(new Intent(this, VpnStateService.class), mServiceConnection, Service.BIND_AUTO_CREATE);
 
 		/* load CA certificates in a background task */
+        //后台加载证书
         new LoadCertificatesTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
     }
 
@@ -122,7 +125,7 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
         super.onNewIntent(intent);
         //// TODO: 2016/5/17 不懂
         if (START_PROFILE.equals(intent.getAction())) {
-            startVpnProfile(intent);
+            startVpnProfile1(intent);
         }
     }
 
@@ -171,7 +174,7 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
             try {
                 startActivityForResult(intent, PREPARE_VPN_SERVICE);
             } catch (ActivityNotFoundException ex) {
-				/* it seems some devices, even though they come with Android 4,
+                /* it seems some devices, even though they come with Android 4,
 				 * don't have the VPN components built into the system image.
 				 * com.android.vpndialogs/com.android.vpndialogs.ConfirmDialog
 				 * will not be found then */
@@ -205,22 +208,24 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
     @Override
     public void onVpnProfileSelected(VpnProfile profile) {
         Bundle profileInfo = new Bundle();
-        profileInfo.putLong(VpnProfileDataSource.KEY_ID, profile.getId());
-        profileInfo.putString(VpnProfileDataSource.KEY_USERNAME, profile.getUsername());
-        profileInfo.putString(VpnProfileDataSource.KEY_PASSWORD, profile.getPassword());
-        profileInfo.putBoolean(PROFILE_REQUIRES_PASSWORD, profile.getVpnType().has(VpnTypeFeature.USER_PASS));
-        profileInfo.putString(PROFILE_NAME, profile.getName());
+        profileInfo.putLong(VpnProfileDataSource.KEY_ID, profile.getId());//1配置id
+        profileInfo.putString(VpnProfileDataSource.KEY_USERNAME, profile.getUsername());//2用户名
+        profileInfo.putString(VpnProfileDataSource.KEY_PASSWORD, profile.getPassword());//3密码
+        profileInfo.putBoolean(PROFILE_REQUIRES_PASSWORD, profile.getVpnType().has(VpnTypeFeature.USER_PASS));//4
+        profileInfo.putString(PROFILE_NAME, profile.getName());//5配置名
 
         removeFragmentByTag(DIALOG_TAG);
 
+        //重连
         if (mService != null && (mService.getState() == State.CONNECTED || mService.getState() == State.CONNECTING)) {
-            profileInfo.putBoolean(PROFILE_RECONNECT, mService.getProfile().getId() == profile.getId());
+            profileInfo.putBoolean(PROFILE_RECONNECT, mService.getProfile().getId() == profile.getId());//6
 
             ConfirmationDialog dialog = new ConfirmationDialog();
             dialog.setArguments(profileInfo);
             dialog.show(this.getSupportFragmentManager(), DIALOG_TAG);
             return;
         }
+        //开始
         startVpnProfile(profileInfo);
     }
 
@@ -230,13 +235,15 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
      * @param profileInfo data about the profile
      */
     private void startVpnProfile(Bundle profileInfo) {
-        if (profileInfo.getBoolean(PROFILE_REQUIRES_PASSWORD) &&
-                profileInfo.getString(VpnProfileDataSource.KEY_PASSWORD) == null) {
+        if (profileInfo.getBoolean(PROFILE_REQUIRES_PASSWORD)
+                && profileInfo.getString(VpnProfileDataSource.KEY_PASSWORD) == null) {
+            //没有输入密码的话，跳出登录对话框
             LoginDialog login = new LoginDialog();
             login.setArguments(profileInfo);
             login.show(getSupportFragmentManager(), DIALOG_TAG);
             return;
         }
+        //准备开始连接
         prepareVpnService(profileInfo);
     }
 
@@ -246,7 +253,7 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
      *
      * @param intent Intent that caused us to start this
      */
-    private void startVpnProfile(Intent intent) {
+    private void startVpnProfile1(Intent intent) {
         long profileId = intent.getLongExtra(EXTRA_VPN_PROFILE_ID, 0);
         if (profileId <= 0) {	/* invalid invocation */
             return;
@@ -269,7 +276,7 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 
     /**
      * Class that loads the cached CA certificates.
-     * 异步加载证书
+     * 异步加载 CA证书
      */
     private class LoadCertificatesTask extends AsyncTask<Void, Void, TrustedCertificateManager> {
         @Override
@@ -355,10 +362,10 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
             username.setText(profileInfo.getString(VpnProfileDataSource.KEY_USERNAME));
             final EditText password = (EditText) view.findViewById(R.id.password);
 
-            AlertDialog.Builder adb = new AlertDialog.Builder(getActivity());
-            adb.setView(view);
-            adb.setTitle(getString(R.string.login_title));
-            adb.setPositiveButton(R.string.login_confirm, new DialogInterface.OnClickListener() {
+            AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+            builder.setView(view);
+            builder.setTitle(getString(R.string.login_title));
+            builder.setPositiveButton(R.string.login_confirm, new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int whichButton) {
                     MainActivity activity = (MainActivity) getActivity();
@@ -366,13 +373,13 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
                     activity.prepareVpnService(profileInfo);
                 }
             });
-            adb.setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
+            builder.setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
                     dismiss();
                 }
             });
-            return adb.create();
+            return builder.create();
         }
     }
 

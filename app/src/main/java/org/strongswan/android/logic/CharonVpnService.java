@@ -61,31 +61,34 @@ public class CharonVpnService extends VpnService implements Runnable {
     public static final String LOG_FILE = "charon.log";
 
     private String mLogFile;
-    private VpnProfileDataSource mDataSource;
+    private VpnProfileDataSource mDataSource;//数据库
     private Thread mConnectionHandler;
     private VpnProfile mCurrentProfile;
     private volatile String mCurrentCertificateAlias;
     private volatile String mCurrentUserCertificateAlias;
-    private VpnProfile mNextProfile;
+    private VpnProfile mNextProfile; //配置文件
     private volatile boolean mProfileUpdated;
     private volatile boolean mTerminate;
     private volatile boolean mIsDisconnecting;
-    private VpnStateService mService;
+    private VpnStateService mVpnStateService;
     private final Object mServiceLock = new Object();
     private final ServiceConnection mServiceConnection = new ServiceConnection() {
         @Override
-        public void onServiceDisconnected(ComponentName name) {	/* since the service is local this is theoretically only called when the process is terminated */
+        public void onServiceDisconnected(ComponentName name) {
+            /* since the service is local this is theoretically only called when the process is terminated */
             synchronized (mServiceLock) {
-                mService = null;
+                mVpnStateService = null;
             }
         }
 
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
+            //获取状态服务对象
             synchronized (mServiceLock) {
-                mService = ((VpnStateService.LocalBinder) service).getService();
+                mVpnStateService = ((VpnStateService.LocalBinder) service).getService();
             }
             /* we are now ready to start the handler thread */
+
             mConnectionHandler.start();
         }
     };
@@ -102,12 +105,28 @@ public class CharonVpnService extends VpnService implements Runnable {
     static final int STATE_GENERIC_ERROR = 7;
 
     @Override
+    public void onCreate() {
+        mLogFile = getFilesDir().getAbsolutePath() + File.separator + LOG_FILE;
+
+        //打开数据库
+        mDataSource = new VpnProfileDataSource(this);
+        mDataSource.open();
+        /* use a separate thread as main thread for charon */
+        mConnectionHandler = new Thread(this);
+		/* the thread is started when the service is bound */
+        //绑定状态服务
+        bindService(new Intent(this, VpnStateService.class), mServiceConnection, Service.BIND_AUTO_CREATE);
+    }
+
+    @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null) {
             Bundle bundle = intent.getExtras();
             VpnProfile profile = null;
             if (bundle != null) {
+                //根据配置id，查数据库，得到配置对象
                 profile = mDataSource.getVpnProfile(bundle.getLong(VpnProfileDataSource.KEY_ID));
+                //设置密码
                 if (profile != null) {
                     String password = bundle.getString(VpnProfileDataSource.KEY_PASSWORD);
                     profile.setPassword(password);
@@ -116,19 +135,6 @@ public class CharonVpnService extends VpnService implements Runnable {
             setNextProfile(profile);
         }
         return START_NOT_STICKY;
-    }
-
-    @Override
-    public void onCreate() {
-        mLogFile = getFilesDir().getAbsolutePath() + File.separator + LOG_FILE;
-
-        mDataSource = new VpnProfileDataSource(this);
-        mDataSource.open();
-		/* use a separate thread as main thread for charon */
-        mConnectionHandler = new Thread(this);
-		/* the thread is started when the service is bound */
-        bindService(new Intent(this, VpnStateService.class),
-                mServiceConnection, Service.BIND_AUTO_CREATE);
     }
 
     @Override
@@ -146,9 +152,11 @@ public class CharonVpnService extends VpnService implements Runnable {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        if (mService != null) {
+        //解绑状态服务
+        if (mVpnStateService != null) {
             unbindService(mServiceConnection);
         }
+        //关闭数据库
         mDataSource.close();
     }
 
@@ -175,6 +183,7 @@ public class CharonVpnService extends VpnService implements Runnable {
                     }
 
                     mProfileUpdated = false;
+                    //停止当前连接
                     stopCurrentConnection();
                     if (mNextProfile == null) {
                         setState(State.DISABLED);
@@ -245,8 +254,8 @@ public class CharonVpnService extends VpnService implements Runnable {
      */
     private void startConnection(VpnProfile profile) {
         synchronized (mServiceLock) {
-            if (mService != null) {
-                mService.startConnection(profile);
+            if (mVpnStateService != null) {
+                mVpnStateService.startConnection(profile);
             }
         }
     }
@@ -259,8 +268,8 @@ public class CharonVpnService extends VpnService implements Runnable {
      */
     private void setState(State state) {
         synchronized (mServiceLock) {
-            if (mService != null) {
-                mService.setState(state);
+            if (mVpnStateService != null) {
+                mVpnStateService.setState(state);
             }
         }
     }
@@ -273,8 +282,8 @@ public class CharonVpnService extends VpnService implements Runnable {
      */
     private void setError(ErrorState error) {
         synchronized (mServiceLock) {
-            if (mService != null) {
-                mService.setError(error);
+            if (mVpnStateService != null) {
+                mVpnStateService.setError(error);
             }
         }
     }
@@ -287,8 +296,8 @@ public class CharonVpnService extends VpnService implements Runnable {
      */
     private void setImcState(ImcState state) {
         synchronized (mServiceLock) {
-            if (mService != null) {
-                mService.setImcState(state);
+            if (mVpnStateService != null) {
+                mVpnStateService.setImcState(state);
             }
         }
     }
@@ -301,9 +310,9 @@ public class CharonVpnService extends VpnService implements Runnable {
      */
     private void setErrorDisconnect(ErrorState error) {
         synchronized (mServiceLock) {
-            if (mService != null) {
+            if (mVpnStateService != null) {
                 if (!mIsDisconnecting) {
-                    mService.setError(error);
+                    mVpnStateService.setError(error);
                 }
             }
         }
@@ -368,8 +377,8 @@ public class CharonVpnService extends VpnService implements Runnable {
     public void addRemediationInstruction(String xml) {
         for (RemediationInstruction instruction : RemediationInstruction.fromXml(xml)) {
             synchronized (mServiceLock) {
-                if (mService != null) {
-                    mService.addRemediationInstruction(instruction);
+                if (mVpnStateService != null) {
+                    mVpnStateService.addRemediationInstruction(instruction);
                 }
             }
         }
@@ -448,7 +457,7 @@ public class CharonVpnService extends VpnService implements Runnable {
      *
      * @param builder BuilderAdapter for this connection
      * @param logfile absolute path to the logfile
-     * @param boyd    enable BYOD features
+     * @param byod    enable BYOD features
      * @return TRUE if initialization was successful
      */
     public native boolean initializeCharon(BuilderAdapter builder, String logfile, boolean byod);

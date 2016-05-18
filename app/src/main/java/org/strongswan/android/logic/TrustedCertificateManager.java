@@ -44,7 +44,7 @@ public class TrustedCertificateManager extends Observable {
 
         private final String mPrefix;
 
-        private TrustedCertificateSource(String prefix) {
+        TrustedCertificateSource(String prefix) {
             mPrefix = prefix;
         }
 

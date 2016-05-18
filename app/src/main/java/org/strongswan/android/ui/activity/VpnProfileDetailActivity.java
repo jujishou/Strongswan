@@ -71,7 +71,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity {
     private static final int MTU_MIN = 1280;
     private static final int MTU_MAX = 1500;
 
-    private Long mId;
+    private Long mId;//前面界面传递过来的profile id
     private String mUserCertLoading;
     private String mSelectedUserId;
 
@@ -258,28 +258,31 @@ public class VpnProfileDetailActivity extends AppCompatActivity {
             }
         });
 
+        //初始化界面数据
         mId = savedInstanceState == null ? null : savedInstanceState.getLong(VpnProfileDataSource.KEY_ID);
         if (mId == null) {
             Bundle extras = getIntent().getExtras();
             mId = extras == null ? null : extras.getLong(VpnProfileDataSource.KEY_ID);
         }
 
-        loadProfileData(savedInstanceState);
+        loadProfileData(savedInstanceState);//加载配置文件数据
+        updateCredentialView();//加载用户证书，显示或隐藏
+        updateCertificateSelector();//加载CA证书选择器，显示还是隐藏
+        updateAdvancedSettings();//加载高级设置，显示或隐藏
 
-        updateCredentialView();
-        updateCertificateSelector();
-        updateAdvancedSettings();
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
         mDataSource.close();
+        Log.e("tag", "mCACertEntry==" + (mCACertEntry == null));
     }
 
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
+        //保存设置
         if (mId != null) {
             outState.putLong(VpnProfileDataSource.KEY_ID, mId);
         }
@@ -383,7 +386,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity {
     /**
      * Update the CA certificate selection UI depending on whether the
      * certificate should be automatically selected or not.
-     * CA证书选择器
+     * CA证书选择器，显示还是隐藏
      */
     private void updateCertificateSelector() {
         if (!mCheckAuto_checkbox.isChecked()) {//非选中时，显示布局
@@ -420,8 +423,10 @@ public class VpnProfileDetailActivity extends AppCompatActivity {
     /**
      * Save or update the profile depending on whether we actually have a
      * profile object or not (this was created in updateProfileData)
+     * 保存配置文件到数据库
      */
     private void saveProfile() {
+        //检查输入是否有效先
         if (verifyInput()) {
             if (mProfile != null) {
                 updateProfileData();
@@ -429,15 +434,16 @@ public class VpnProfileDetailActivity extends AppCompatActivity {
             } else {
                 mProfile = new VpnProfile();
                 updateProfileData();
-                mDataSource.insertProfile(mProfile);
+                mDataSource.insertProfile(mProfile);//保存到数据库中
             }
-            setResult(RESULT_OK, new Intent().putExtra(VpnProfileDataSource.KEY_ID, mProfile.getId()));
+            setResult(RESULT_OK, new Intent().putExtra(VpnProfileDataSource.KEY_ID, mProfile.getId()));//数据传递给前一个界面
             finish();
         }
     }
 
     /**
      * Verify the user input and display error messages.
+     * 检查输入
      *
      * @return true if the input is valid
      */
@@ -454,7 +460,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity {
             }
         }
         if (mVpnType.has(VpnTypeFeature.CERTIFICATE) && mUserCertEntry == null) {	/* let's show an error icon */
-            ((TextView) mSelectUserCert.findViewById(android.R.id.text1)).setError("");
+            ((TextView) mSelectUserCert.findViewById(android.R.id.text1)).setError("还没有选择用户证书");
             valid = false;
         }
         if (!mCheckAuto_checkbox.isChecked() && mCACertEntry == null) {
@@ -482,35 +488,36 @@ public class VpnProfileDetailActivity extends AppCompatActivity {
         /* the name is optional, we default to the gateway if none is given */
         String name = mName.getText().toString().trim();//名字
         String gateway = mGateway.getText().toString().trim();//网关
-        mProfile.setName(name.isEmpty() ? gateway : name);
-        mProfile.setGateway(gateway);
+        mProfile.setName(name.isEmpty() ? gateway : name);//1
+        mProfile.setGateway(gateway);//2
 
-        mProfile.setVpnType(mVpnType);//连接类型
+        mProfile.setVpnType(mVpnType);//3连接类型
         if (mVpnType.has(VpnTypeFeature.USER_PASS)) {//查看特征是否需要用户名，密码
-            mProfile.setUsername(mUsername.getText().toString().trim());
+            mProfile.setUsername(mUsername.getText().toString().trim());//4
             String password = mPassword.getText().toString().trim();
             password = password.isEmpty() ? null : password;
-            mProfile.setPassword(password);
+            mProfile.setPassword(password);//5
         }
         if (mVpnType.has(VpnTypeFeature.CERTIFICATE)) {//查看特征是否需要证书，
-            mProfile.setUserCertificateAlias(mUserCertEntry.getAlias());
-            mProfile.setLocalId(mSelectedUserId);
+            mProfile.setUserCertificateAlias(mUserCertEntry.getAlias());//6
+            mProfile.setLocalId(mSelectedUserId);//7
         }
 
         String certAlias = mCheckAuto_checkbox.isChecked() ? null : mCACertEntry.getAlias();
-        mProfile.setCertificateAlias(certAlias);
+        mProfile.setCertificateAlias(certAlias);//8
         String remote_id = mRemoteId.getText().toString().trim();
-        mProfile.setRemoteId(remote_id.isEmpty() ? null : remote_id);
-        mProfile.setMTU(getInteger(mMTU));
-        mProfile.setPort(getInteger(mPort));
+        mProfile.setRemoteId(remote_id.isEmpty() ? null : remote_id);//9
+        mProfile.setMTU(getInteger(mMTU));//10
+        mProfile.setPort(getInteger(mPort));//11
         int st = 0;
         st |= mBlockIPv4_checkbox.isChecked() ? VpnProfile.SPLIT_TUNNELING_BLOCK_IPV4 : 0;
         st |= mBlockIPv6_checkbox.isChecked() ? VpnProfile.SPLIT_TUNNELING_BLOCK_IPV6 : 0;
-        mProfile.setSplitTunneling(st == 0 ? null : st);
+        mProfile.setSplitTunneling(st == 0 ? null : st);//12
     }
 
     /**
      * Load an existing profile if we got an ID
+     * 初始化数据
      *
      * @param savedInstanceState previously saved state
      */
@@ -627,9 +634,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity {
             X509Certificate[] chain = null;
             try {
                 chain = KeyChain.getCertificateChain(mContext, mAlias);
-            } catch (KeyChainException e) {
-                e.printStackTrace();
-            } catch (InterruptedException e) {
+            } catch (KeyChainException | InterruptedException e) {
                 e.printStackTrace();
             }
             if (chain != null && chain.length > 0) {
@@ -647,7 +652,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity {
                 mUserCertEntry = null;
             }
             mUserCertLoading = null;
-            updateCredentialView();
+            updateCredentialView();//改变显示状态
         }
     }
 
