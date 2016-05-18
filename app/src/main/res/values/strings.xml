@@ -20,14 +20,14 @@
     <string name="log_mail_subject">strongSwan %1$s Log File</string>
 
     <!-- VPN profile list -->
-    <string name="no_profiles">No VPN profiles.</string>
+    <string name="no_profiles">没有VPN配置文件</string>
     <string name="add_profile">添加配置文件</string>
-    <string name="edit_profile">Edit</string>
-    <string name="delete_profile">Delete</string>
-    <string name="select_profiles">Select profiles</string>
-    <string name="profiles_deleted">Selected profiles deleted</string>
-    <string name="no_profile_selected">No profile selected</string>
-    <string name="one_profile_selected">One profile selected</string>
+    <string name="edit_profile">编辑</string>
+    <string name="delete_profile">删除</string>
+    <string name="select_profiles">选择配置文件</string>
+    <string name="profiles_deleted">已删除</string>
+    <string name="no_profile_selected">未选择配置文件</string>
+    <string name="one_profile_selected">选择一个配置文件</string>
     <string name="x_profiles_selected">%1$d profiles selected"</string>
 
     <!-- VPN profile details -->
@@ -98,10 +98,10 @@
     <string name="state_error">错误</string>
 
     <!-- IMC state fragment -->
-    <string name="imc_state_label">Assessment:</string>
-    <string name="imc_state_isolate">Restricted</string>
+    <string name="imc_state_label">评估:</string>
+    <string name="imc_state_isolate">受限的</string>
     <string name="imc_state_block">失败</string>
-    <string name="show_remediation_instructions">View remediation instructions/查看补救措施</string>
+    <string name="show_remediation_instructions">查看补救措施</string>
 
     <!-- Remediation instructions -->
     <string name="remediation_instructions_title">补救措施</string>

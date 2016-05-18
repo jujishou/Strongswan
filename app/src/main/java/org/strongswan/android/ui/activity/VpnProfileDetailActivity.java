@@ -48,6 +48,7 @@ import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.MultiAutoCompleteTextView;
 import android.widget.RelativeLayout;
 import android.widget.Spinner;
@@ -70,39 +71,47 @@ public class VpnProfileDetailActivity extends AppCompatActivity {
     private static final int MTU_MIN = 1280;
     private static final int MTU_MAX = 1500;
 
-    private VpnProfileDataSource mDataSource;
     private Long mId;
-    private TrustedCertificateEntry mCertEntry;
     private String mUserCertLoading;
-    private CertificateIdentitiesAdapter mSelectUserIdAdapter;
     private String mSelectedUserId;
+
+    private VpnProfileDataSource mDataSource;//数据库
+    private TrustedCertificateEntry mCACertEntry;
     private TrustedCertificateEntry mUserCertEntry;
-    private VpnType mVpnType = VpnType.IKEV2_EAP;
-    private VpnProfile mProfile;
-    private MultiAutoCompleteTextView mName;
-    private TextInputLayoutHelper mNameWrap;
-    private EditText mGateway;
-    private Spinner mSelectVpnType;
-    private ViewGroup mUsernamePassword;
-    private EditText mUsername;
-    private TextInputLayoutHelper mUsernameWrap;
-    private EditText mPassword;
+    private CertificateIdentitiesAdapter mSelectUserIdAdapter;
+    private VpnType mVpnType = VpnType.IKEV2_EAP;//连接类型，默认值IKEV2_EAP
+    private VpnProfile mProfile;//配置文件
+
+    private Spinner mSelectVpnType_spinner;
+    private Spinner mSelectUserId_spinner;
+
+    private LinearLayout mAdvancedSettings_ll;
     private ViewGroup mUserCertificate;
+    private ViewGroup mUsernamePassword;
+
     private RelativeLayout mSelectUserCert;
-    private Spinner mSelectUserId;
-    private CheckBox mCheckAuto;
-    private RelativeLayout mSelectCert;
+    private RelativeLayout mSelectCert_relativelayout;
     private RelativeLayout mTncNotice;
-    private CheckBox mShowAdvanced;
-    private ViewGroup mAdvancedSettings;
+
+    private MultiAutoCompleteTextView mName;
     private MultiAutoCompleteTextView mRemoteId;
-    private TextInputLayoutHelper mRemoteIdWrap;
+
+    private EditText mGateway;
+    private EditText mUsername;
+    private EditText mPassword;
     private EditText mMTU;
-    private TextInputLayoutHelper mMTUWrap;
     private EditText mPort;
+
+    private TextInputLayoutHelper mNameWrap;
+    private TextInputLayoutHelper mUsernameWrap;
+    private TextInputLayoutHelper mRemoteIdWrap;
+    private TextInputLayoutHelper mMTUWrap;
     private TextInputLayoutHelper mPortWrap;
-    private CheckBox mBlockIPv4;
-    private CheckBox mBlockIPv6;
+
+    private CheckBox mCheckAuto_checkbox;
+    private CheckBox mShowAdvanced_checkbox;
+    private CheckBox mBlockIPv4_checkbox;
+    private CheckBox mBlockIPv6_checkbox;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -121,7 +130,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity {
         mName = (MultiAutoCompleteTextView) findViewById(R.id.name);
         mNameWrap = (TextInputLayoutHelper) findViewById(R.id.name_wrap);
         mGateway = (EditText) findViewById(R.id.gateway);
-        mSelectVpnType = (Spinner) findViewById(R.id.vpn_type);
+        mSelectVpnType_spinner = (Spinner) findViewById(R.id.vpn_type);
         mTncNotice = (RelativeLayout) findViewById(R.id.tnc_notice);
 
         mUsernamePassword = (ViewGroup) findViewById(R.id.username_password_group);
@@ -131,13 +140,13 @@ public class VpnProfileDetailActivity extends AppCompatActivity {
 
         mUserCertificate = (ViewGroup) findViewById(R.id.user_certificate_group);
         mSelectUserCert = (RelativeLayout) findViewById(R.id.select_user_certificate);
-        mSelectUserId = (Spinner) findViewById(R.id.select_user_id);
+        mSelectUserId_spinner = (Spinner) findViewById(R.id.select_user_id);
 
-        mCheckAuto = (CheckBox) findViewById(R.id.ca_auto);
-        mSelectCert = (RelativeLayout) findViewById(R.id.select_certificate);
+        mCheckAuto_checkbox = (CheckBox) findViewById(R.id.ca_auto);
+        mSelectCert_relativelayout = (RelativeLayout) findViewById(R.id.select_certificate);
 
-        mShowAdvanced = (CheckBox) findViewById(R.id.show_advanced);
-        mAdvancedSettings = (ViewGroup) findViewById(R.id.advanced_settings);
+        mShowAdvanced_checkbox = (CheckBox) findViewById(R.id.show_advanced);
+        mAdvancedSettings_ll = (LinearLayout) findViewById(R.id.advanced_settings);
 
         mRemoteId = (MultiAutoCompleteTextView) findViewById(R.id.remote_id);
         mRemoteIdWrap = (TextInputLayoutHelper) findViewById(R.id.remote_id_wrap);
@@ -145,12 +154,12 @@ public class VpnProfileDetailActivity extends AppCompatActivity {
         mMTUWrap = (TextInputLayoutHelper) findViewById(R.id.mtu_wrap);
         mPort = (EditText) findViewById(R.id.port);
         mPortWrap = (TextInputLayoutHelper) findViewById(R.id.port_wrap);
-        mBlockIPv4 = (CheckBox) findViewById(R.id.split_tunneling_v4);
-        mBlockIPv6 = (CheckBox) findViewById(R.id.split_tunneling_v6);
+        mBlockIPv4_checkbox = (CheckBox) findViewById(R.id.split_tunneling_v4);
+        mBlockIPv6_checkbox = (CheckBox) findViewById(R.id.split_tunneling_v6);
 
         final SpaceTokenizer spaceTokenizer = new SpaceTokenizer();
-        mName.setTokenizer(spaceTokenizer);
-        mRemoteId.setTokenizer(spaceTokenizer);
+        mName.setTokenizer(spaceTokenizer);//配置名字（可选）
+        mRemoteId.setTokenizer(spaceTokenizer);//服务器id
         final ArrayAdapter<String> completeAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line);
         mName.setAdapter(completeAdapter);
         mRemoteId.setAdapter(completeAdapter);
@@ -178,17 +187,18 @@ public class VpnProfileDetailActivity extends AppCompatActivity {
 //            }
 //        });
 
-        mSelectVpnType.setOnItemSelectedListener(new OnItemSelectedListener() {
+        //选择连接类型的spinner 点击事件，从对应VpnType中取值
+        mSelectVpnType_spinner.setOnItemSelectedListener(new OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 mVpnType = VpnType.values()[position];
-                updateCredentialView();
+                updateCredentialView();//根据选择的连接类型显示需要配置的属性
             }
 
             @Override
             public void onNothingSelected(AdapterView<?> parent) {	/* should not happen */
                 mVpnType = VpnType.IKEV2_EAP;
-                updateCredentialView();
+                updateCredentialView();//根据选择的连接类型显示需要配置的属性
             }
         });
 
@@ -203,12 +213,15 @@ public class VpnProfileDetailActivity extends AppCompatActivity {
 
         //用户证书
         mSelectUserCert.setOnClickListener(new SelectUserCertOnClickListener());
+        //根据用户证书，生成用户身份信息
         mSelectUserIdAdapter = new CertificateIdentitiesAdapter(this);
-        mSelectUserId.setAdapter(mSelectUserIdAdapter);
-        mSelectUserId.setOnItemSelectedListener(new OnItemSelectedListener() {
+        mSelectUserId_spinner.setAdapter(mSelectUserIdAdapter);
+        //选择用户身份
+        mSelectUserId_spinner.setOnItemSelectedListener(new OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                if (mUserCertEntry != null) {	/* we don't store the subject DN as it is in the reverse order and the default anyway */
+                if (mUserCertEntry != null) {
+                    /* we don't store the subject DN as it is in the reverse order and the default anyway */
                     mSelectedUserId = position == 0 ? null : mSelectUserIdAdapter.getItem(position);
                 }
             }
@@ -220,15 +233,15 @@ public class VpnProfileDetailActivity extends AppCompatActivity {
         });
 
         //自动选择CA证书
-        mCheckAuto.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+        mCheckAuto_checkbox.setOnCheckedChangeListener(new OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                updateCertificateSelector();
+                updateCertificateSelector();//设置显示或隐藏添加ca证书
             }
         });
 
-        //选择CA证书，执行的操作
-        mSelectCert.setOnClickListener(new OnClickListener() {
+        //选择CA证书，执行的操作,跳转界面
+        mSelectCert_relativelayout.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(VpnProfileDetailActivity.this, TrustedCertificatesActivity.class);
@@ -238,10 +251,10 @@ public class VpnProfileDetailActivity extends AppCompatActivity {
         });
 
         //显示高级选项
-        mShowAdvanced.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+        mShowAdvanced_checkbox.setOnCheckedChangeListener(new OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                updateAdvancedSettings();
+                updateAdvancedSettings();//设置显示或隐藏
             }
         });
 
@@ -276,8 +289,8 @@ public class VpnProfileDetailActivity extends AppCompatActivity {
         if (mSelectedUserId != null) {
             outState.putString(VpnProfileDataSource.KEY_LOCAL_ID, mSelectedUserId);
         }
-        if (mCertEntry != null) {
-            outState.putString(VpnProfileDataSource.KEY_CERTIFICATE, mCertEntry.getAlias());
+        if (mCACertEntry != null) {
+            outState.putString(VpnProfileDataSource.KEY_CERTIFICATE, mCACertEntry.getAlias());
         }
     }
 
@@ -306,12 +319,12 @@ public class VpnProfileDetailActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         switch (requestCode) {
-            case SELECT_TRUSTED_CERTIFICATE:
+            case SELECT_TRUSTED_CERTIFICATE://CA证书，选择完回调
                 if (resultCode == RESULT_OK) {
                     String alias = data.getStringExtra(VpnProfileDataSource.KEY_CERTIFICATE);
-                    X509Certificate certificate = TrustedCertificateManager.getInstance().getCACertificateFromAlias(alias);
-                    mCertEntry = certificate == null ? null : new TrustedCertificateEntry(alias, certificate);
-                    updateCertificateSelector();
+                    X509Certificate certificate = TrustedCertificateManager.getInstance().getCACertificateFromAlias(alias);//根据别名生成证书
+                    mCACertEntry = certificate == null ? null : new TrustedCertificateEntry(alias, certificate);//生成TrustedCertificateEntry
+                    updateCertificateSelector();//调整显示状态
                 }
                 break;
             default:
@@ -324,25 +337,27 @@ public class VpnProfileDetailActivity extends AppCompatActivity {
      * 根据选择的连接类型显示需要配置的属性
      */
     private void updateCredentialView() {
+        TextView text1 = (TextView) mSelectUserCert.findViewById(android.R.id.text1);
+        TextView text2 = (TextView) mSelectUserCert.findViewById(android.R.id.text2);
         mUsernamePassword.setVisibility(mVpnType.has(VpnTypeFeature.USER_PASS) ? View.VISIBLE : View.GONE);
         mUserCertificate.setVisibility(mVpnType.has(VpnTypeFeature.CERTIFICATE) ? View.VISIBLE : View.GONE);
         mTncNotice.setVisibility(mVpnType.has(VpnTypeFeature.BYOD) ? View.VISIBLE : View.GONE);
 
         if (mVpnType.has(VpnTypeFeature.CERTIFICATE)) {
-            mSelectUserId.setEnabled(false);
+            mSelectUserId_spinner.setEnabled(false);
             if (mUserCertLoading != null) {
-                ((TextView) mSelectUserCert.findViewById(android.R.id.text1)).setText(mUserCertLoading);
-                ((TextView) mSelectUserCert.findViewById(android.R.id.text2)).setText(R.string.loading);
+                text1.setText(mUserCertLoading);
+                text2.setText(R.string.loading);
             } else if (mUserCertEntry != null) {	/* clear any errors and set the new data */
-                ((TextView) mSelectUserCert.findViewById(android.R.id.text1)).setError(null);
-                ((TextView) mSelectUserCert.findViewById(android.R.id.text1)).setText(mUserCertEntry.getAlias());
-                ((TextView) mSelectUserCert.findViewById(android.R.id.text2)).setText(mUserCertEntry.getCertificate().getSubjectDN().toString());
+                text1.setError(null);
+                text1.setText(mUserCertEntry.getAlias());
+                text2.setText(mUserCertEntry.getCertificate().getSubjectDN().toString());
                 mSelectUserIdAdapter.setCertificate(mUserCertEntry);
-                mSelectUserId.setSelection(mSelectUserIdAdapter.getPosition(mSelectedUserId));
-                mSelectUserId.setEnabled(true);
+                mSelectUserId_spinner.setSelection(mSelectUserIdAdapter.getPosition(mSelectedUserId));
+                mSelectUserId_spinner.setEnabled(true);
             } else {
-                ((TextView) mSelectUserCert.findViewById(android.R.id.text1)).setText("选择证书");
-                ((TextView) mSelectUserCert.findViewById(android.R.id.text2)).setText("选择证书");
+                text1.setText("选择证书");
+                text2.setText("请选择一个证书");
                 mSelectUserIdAdapter.setCertificate(null);
             }
         }
@@ -353,54 +368,53 @@ public class VpnProfileDetailActivity extends AppCompatActivity {
      * or the user did not select a certificate in the spinner.
      */
     private void showCertificateAlert() {
-        AlertDialog.Builder adb = new AlertDialog.Builder(VpnProfileDetailActivity.this);
-        adb.setTitle(R.string.alert_text_nocertfound_title);
-        adb.setMessage(R.string.alert_text_nocertfound);
-        adb.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(VpnProfileDetailActivity.this);
+        builder.setTitle("未发现CA证书");
+        builder.setMessage(R.string.alert_text_nocertfound);
+        builder.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int id) {
                 dialog.cancel();
             }
         });
-        adb.show();
+        builder.show();
     }
 
     /**
      * Update the CA certificate selection UI depending on whether the
      * certificate should be automatically selected or not.
-     * 证书选择器
+     * CA证书选择器
      */
     private void updateCertificateSelector() {
-        if (!mCheckAuto.isChecked()) {
-            mSelectCert.setEnabled(true);
-            mSelectCert.setVisibility(View.VISIBLE);
+        if (!mCheckAuto_checkbox.isChecked()) {//非选中时，显示布局
+            mSelectCert_relativelayout.setEnabled(true);
+            mSelectCert_relativelayout.setVisibility(View.VISIBLE);
 
-            if (mCertEntry != null) {
-                ((TextView) mSelectCert.findViewById(android.R.id.text1)).setText(mCertEntry.getSubjectPrimary());
-                ((TextView) mSelectCert.findViewById(android.R.id.text2)).setText(mCertEntry.getSubjectSecondary());
+            if (mCACertEntry != null) {
+                ((TextView) mSelectCert_relativelayout.findViewById(android.R.id.text1)).setText(mCACertEntry.getSubjectPrimary());
+                ((TextView) mSelectCert_relativelayout.findViewById(android.R.id.text2)).setText(mCACertEntry.getSubjectSecondary());
             } else {
-                ((TextView) mSelectCert.findViewById(android.R.id.text1)).setText(R.string.profile_ca_select_certificate_label);
-                ((TextView) mSelectCert.findViewById(android.R.id.text2)).setText(R.string.profile_ca_select_certificate);
+                ((TextView) mSelectCert_relativelayout.findViewById(android.R.id.text1)).setText(R.string.profile_ca_select_certificate_label);
+                ((TextView) mSelectCert_relativelayout.findViewById(android.R.id.text2)).setText(R.string.profile_ca_select_certificate);
             }
-        } else {
-            mSelectCert.setEnabled(false);
-            mSelectCert.setVisibility(View.GONE);
+        } else {//选中时隐藏布局，自动选择CA证书
+            mSelectCert_relativelayout.setEnabled(false);
+            mSelectCert_relativelayout.setVisibility(View.GONE);
         }
     }
 
     /**
-     * Update the advanced settings UI depending on whether any advanced
-     * settings have already been made.
+     * Update the advanced settings UI depending on whether any advanced settings have already been made.
+     * 更新高级设置
      */
     private void updateAdvancedSettings() {
-        boolean show = mShowAdvanced.isChecked();
+        boolean show = mShowAdvanced_checkbox.isChecked();
         if (!show && mProfile != null) {
             Integer st = mProfile.getSplitTunneling();
-            show = mProfile.getRemoteId() != null || mProfile.getMTU() != null ||
-                    mProfile.getPort() != null || (st != null && st != 0);
+            show = mProfile.getRemoteId() != null || mProfile.getMTU() != null || mProfile.getPort() != null || (st != null && st != 0);
         }
-        mShowAdvanced.setVisibility(!show ? View.VISIBLE : View.GONE);
-        mAdvancedSettings.setVisibility(show ? View.VISIBLE : View.GONE);
+        mShowAdvanced_checkbox.setVisibility(show ? View.GONE : View.VISIBLE);
+        mAdvancedSettings_ll.setVisibility(show ? View.VISIBLE : View.GONE);
     }
 
     /**
@@ -443,7 +457,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity {
             ((TextView) mSelectUserCert.findViewById(android.R.id.text1)).setError("");
             valid = false;
         }
-        if (!mCheckAuto.isChecked() && mCertEntry == null) {
+        if (!mCheckAuto_checkbox.isChecked() && mCACertEntry == null) {
             showCertificateAlert();
             valid = false;
         }
@@ -462,6 +476,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity {
 
     /**
      * Update the profile object with the data entered by the user
+     * 更新用户输入的配置数据
      */
     private void updateProfileData() {
         /* the name is optional, we default to the gateway if none is given */
@@ -469,6 +484,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity {
         String gateway = mGateway.getText().toString().trim();//网关
         mProfile.setName(name.isEmpty() ? gateway : name);
         mProfile.setGateway(gateway);
+
         mProfile.setVpnType(mVpnType);//连接类型
         if (mVpnType.has(VpnTypeFeature.USER_PASS)) {//查看特征是否需要用户名，密码
             mProfile.setUsername(mUsername.getText().toString().trim());
@@ -480,15 +496,16 @@ public class VpnProfileDetailActivity extends AppCompatActivity {
             mProfile.setUserCertificateAlias(mUserCertEntry.getAlias());
             mProfile.setLocalId(mSelectedUserId);
         }
-        String certAlias = mCheckAuto.isChecked() ? null : mCertEntry.getAlias();
+
+        String certAlias = mCheckAuto_checkbox.isChecked() ? null : mCACertEntry.getAlias();
         mProfile.setCertificateAlias(certAlias);
         String remote_id = mRemoteId.getText().toString().trim();
         mProfile.setRemoteId(remote_id.isEmpty() ? null : remote_id);
         mProfile.setMTU(getInteger(mMTU));
         mProfile.setPort(getInteger(mPort));
         int st = 0;
-        st |= mBlockIPv4.isChecked() ? VpnProfile.SPLIT_TUNNELING_BLOCK_IPV4 : 0;
-        st |= mBlockIPv6.isChecked() ? VpnProfile.SPLIT_TUNNELING_BLOCK_IPV6 : 0;
+        st |= mBlockIPv4_checkbox.isChecked() ? VpnProfile.SPLIT_TUNNELING_BLOCK_IPV4 : 0;
+        st |= mBlockIPv6_checkbox.isChecked() ? VpnProfile.SPLIT_TUNNELING_BLOCK_IPV6 : 0;
         mProfile.setSplitTunneling(st == 0 ? null : st);
     }
 
@@ -500,7 +517,6 @@ public class VpnProfileDetailActivity extends AppCompatActivity {
     private void loadProfileData(Bundle savedInstanceState) {
         String useralias = null, local_id = null, alias = null;
 
-//        getSupportActionBar().setTitle(R.string.add_profile);
         if (mId != null && mId != 0) {
             mProfile = mDataSource.getVpnProfile(mId);
             if (mProfile != null) {
@@ -512,8 +528,8 @@ public class VpnProfileDetailActivity extends AppCompatActivity {
                 mRemoteId.setText(mProfile.getRemoteId());
                 mMTU.setText(mProfile.getMTU() != null ? mProfile.getMTU().toString() : null);
                 mPort.setText(mProfile.getPort() != null ? mProfile.getPort().toString() : null);
-                mBlockIPv4.setChecked(mProfile.getSplitTunneling() != null ? (mProfile.getSplitTunneling() & VpnProfile.SPLIT_TUNNELING_BLOCK_IPV4) != 0 : false);
-                mBlockIPv6.setChecked(mProfile.getSplitTunneling() != null ? (mProfile.getSplitTunneling() & VpnProfile.SPLIT_TUNNELING_BLOCK_IPV6) != 0 : false);
+                mBlockIPv4_checkbox.setChecked(mProfile.getSplitTunneling() != null ? (mProfile.getSplitTunneling() & VpnProfile.SPLIT_TUNNELING_BLOCK_IPV4) != 0 : false);
+                mBlockIPv6_checkbox.setChecked(mProfile.getSplitTunneling() != null ? (mProfile.getSplitTunneling() & VpnProfile.SPLIT_TUNNELING_BLOCK_IPV6) != 0 : false);
                 useralias = mProfile.getUserCertificateAlias();
                 local_id = mProfile.getLocalId();
                 alias = mProfile.getCertificateAlias();
@@ -525,7 +541,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity {
             }
         }
 
-        mSelectVpnType.setSelection(mVpnType.ordinal());
+        mSelectVpnType_spinner.setSelection(mVpnType.ordinal());
 
 		/* check if the user selected a user certificate previously */
         useralias = savedInstanceState == null ? useralias : savedInstanceState.getString(VpnProfileDataSource.KEY_USER_CERTIFICATE);
@@ -539,14 +555,14 @@ public class VpnProfileDetailActivity extends AppCompatActivity {
 
 		/* check if the user selected a CA certificate previously */
         alias = savedInstanceState == null ? alias : savedInstanceState.getString(VpnProfileDataSource.KEY_CERTIFICATE);
-        mCheckAuto.setChecked(alias == null);
+        mCheckAuto_checkbox.setChecked(alias == null);
         if (alias != null) {
             X509Certificate certificate = TrustedCertificateManager.getInstance().getCACertificateFromAlias(alias);
             if (certificate != null) {
-                mCertEntry = new TrustedCertificateEntry(alias, certificate);
+                mCACertEntry = new TrustedCertificateEntry(alias, certificate);
             } else {	/* previously selected certificate is not here anymore */
                 showCertificateAlert();
-                mCertEntry = null;
+                mCACertEntry = null;
             }
         }
     }
@@ -563,6 +579,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity {
 
     //用户证书点击事件
     private class SelectUserCertOnClickListener implements OnClickListener, KeyChainAliasCallback {
+        @SuppressWarnings("WrongConstant")
         @Override
         public void onClick(View v) {
             String useralias = mUserCertEntry != null ? mUserCertEntry.getAlias() : null;
@@ -581,7 +598,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity {
                             if (chain != null && chain.length > 0) {
                                 mUserCertEntry = new TrustedCertificateEntry(alias, chain[0]);
                             }
-                            updateCredentialView();
+                            updateCredentialView();//改变布局状态
                         }
                     });
                 } catch (KeyChainException | InterruptedException e) {

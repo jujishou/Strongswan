@@ -24,6 +24,7 @@ import android.content.res.TypedArray;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.ActionMode;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -55,12 +56,12 @@ public class VpnProfileListFragment extends Fragment {
     private VpnProfileDataSource mDataSource;
     private VpnProfileAdapter mListAdapter;
     private ListView mListView;
-    private OnVpnProfileSelectedListener mListener;
-    private boolean mReadOnly;
 
-    /**
-     * The activity containing this fragment should implement this interface
-     */
+    private OnVpnProfileSelectedListener mListener;//接口回调用
+
+    private boolean mReadOnly;//
+
+    //在Activity中实现该接口
     public interface OnVpnProfileSelectedListener {
         void onVpnProfileSelected(VpnProfile profile);
     }
@@ -68,25 +69,11 @@ public class VpnProfileListFragment extends Fragment {
     @Override
     public void onInflate(Context context, AttributeSet attrs, Bundle savedInstanceState) {
         super.onInflate(context, attrs, savedInstanceState);
+        //获取自定义属性
         TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.Fragment);
         mReadOnly = a.getBoolean(R.styleable.Fragment_read_only, false);
         a.recycle();
-    }
-
-    @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.profile_list_fragment, null);
-
-        mListView = (ListView) view.findViewById(R.id.profile_list);
-        mListView.setAdapter(mListAdapter);
-        mListView.setEmptyView(view.findViewById(R.id.profile_list_empty));
-        mListView.setOnItemClickListener(mVpnProfileClicked);//设置item点击事件
-
-        if (!mReadOnly) {
-            mListView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE_MODAL);
-            mListView.setMultiChoiceModeListener(mVpnProfileSelected);
-        }
-        return view;
+        Log.i("--tag", "onInflate is run。--" + mReadOnly);
     }
 
     @Override
@@ -97,10 +84,11 @@ public class VpnProfileListFragment extends Fragment {
         if (args != null) {
             mReadOnly = args.getBoolean("read_only", mReadOnly);
         }
+        Log.i("--tag", "onCreate is run。args.getBoolean--" + mReadOnly);
 
         //如果非只读
         if (!mReadOnly) {
-            setHasOptionsMenu(true);
+            setHasOptionsMenu(true);//只有设置为true，fragment中菜单才可以添加
         }
 
         //打开数据库
@@ -115,9 +103,35 @@ public class VpnProfileListFragment extends Fragment {
     }
 
     @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        View view = inflater.inflate(R.layout.profile_list_fragment, null);
+
+        mListView = (ListView) view.findViewById(R.id.profile_list);
+        mListView.setAdapter(mListAdapter);
+        mListView.setEmptyView(view.findViewById(R.id.profile_list_empty));
+        //设置item点击事件
+        mListView.setOnItemClickListener(new OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                if (mListener != null) {
+                    VpnProfile vpnProfile = (VpnProfile) parent.getItemAtPosition(position);
+                    mListener.onVpnProfileSelected(vpnProfile);
+                }
+            }
+        });
+
+        //非只读模式则开启多选listener
+        if (!mReadOnly) {
+            mListView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE_MODAL);
+            mListView.setMultiChoiceModeListener(mVpnProfileSelected);
+        }
+        return view;
+    }
+
+    @Override
     public void onDestroy() {
         super.onDestroy();
-        mDataSource.close();
+        mDataSource.close();//关闭数据库
     }
 
     @Override
@@ -164,31 +178,25 @@ public class VpnProfileListFragment extends Fragment {
         switch (requestCode) {
             case ADD_REQUEST:
             case EDIT_REQUEST:
-                if (resultCode != Activity.RESULT_OK) {
+                if (resultCode == Activity.RESULT_OK) {
+                    //配置文件保存到数据库中，传过来的只有KEY_ID
+                    long id = data.getLongExtra(VpnProfileDataSource.KEY_ID, 0);
+                    //然后通过数据库取出对应VpnProfile
+                    VpnProfile profile = mDataSource.getVpnProfile(id);
+                    //不管是否是编辑还是添加，先移除，再添加
+                    if (profile != null) {
+                    /* in case this was an edit, we remove it first */
+                        mVpnProfiles.remove(profile);
+                        mVpnProfiles.add(profile);
+                        mListAdapter.notifyDataSetChanged();
+                    }
                     return;
                 }
-                long id = data.getLongExtra(VpnProfileDataSource.KEY_ID, 0);
-                VpnProfile profile = mDataSource.getVpnProfile(id);
-                if (profile != null) {	/* in case this was an edit, we remove it first */
-                    mVpnProfiles.remove(profile);
-                    mVpnProfiles.add(profile);
-                    mListAdapter.notifyDataSetChanged();
-                }
-                return;
         }
         super.onActivityResult(requestCode, resultCode, data);
     }
 
-    private final OnItemClickListener mVpnProfileClicked = new OnItemClickListener() {
-        @Override
-        public void onItemClick(AdapterView<?> a, View v, int position, long id) {
-            if (mListener != null) {
-                VpnProfile vpnProfile = (VpnProfile) a.getItemAtPosition(position);
-                mListener.onVpnProfileSelected(vpnProfile);
-            }
-        }
-    };
-
+    //多选模式
     private final MultiChoiceModeListener mVpnProfileSelected = new MultiChoiceModeListener() {
         private HashSet<Integer> mSelected;
         private MenuItem mEditProfile;
@@ -207,7 +215,7 @@ public class VpnProfileListFragment extends Fragment {
             MenuInflater inflater = mode.getMenuInflater();
             inflater.inflate(R.menu.profile_list_context, menu);
             mEditProfile = menu.findItem(R.id.edit_profile);
-            mSelected = new HashSet<Integer>();
+            mSelected = new HashSet<>();
             mode.setTitle(R.string.select_profiles);
             return true;
         }
@@ -215,7 +223,7 @@ public class VpnProfileListFragment extends Fragment {
         @Override
         public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
             switch (item.getItemId()) {
-                case R.id.edit_profile: {
+                case R.id.edit_profile: {//编辑
                     int position = mSelected.iterator().next();
                     VpnProfile profile = (VpnProfile) mListView.getItemAtPosition(position);
                     Intent connectionIntent = new Intent(getActivity(), VpnProfileDetailActivity.class);
@@ -223,29 +231,26 @@ public class VpnProfileListFragment extends Fragment {
                     startActivityForResult(connectionIntent, EDIT_REQUEST);
                     break;
                 }
-                case R.id.delete_profile: {
-                    ArrayList<VpnProfile> profiles = new ArrayList<VpnProfile>();
-                    for (int position : mSelected) {
+                case R.id.delete_profile: {//删除
+                    ArrayList<VpnProfile> profiles = new ArrayList<>();
+                    for (int position : mSelected) {//列表中删除
                         profiles.add((VpnProfile) mListView.getItemAtPosition(position));
                     }
-                    for (VpnProfile profile : profiles) {
+                    mListAdapter.notifyDataSetChanged();
+                    for (VpnProfile profile : profiles) {//数据库中删除
                         mDataSource.deleteVpnProfile(profile);
                         mVpnProfiles.remove(profile);
                     }
-                    mListAdapter.notifyDataSetChanged();
-                    Toast.makeText(VpnProfileListFragment.this.getActivity(),
-                            R.string.profiles_deleted, Toast.LENGTH_SHORT).show();
+                    Toast.makeText(VpnProfileListFragment.this.getActivity(), R.string.profiles_deleted, Toast.LENGTH_SHORT).show();
                     break;
                 }
-                default:
-                    return false;
             }
-            mode.finish();
+            mode.finish();//退出多选模式
             return true;
         }
 
         @Override
-        public void onItemCheckedStateChanged(ActionMode mode, int position, long id, boolean checked) {
+        public void onItemCheckedStateChanged(ActionMode mode, int position, long id, boolean checked) {//当点击改变时调用
             if (checked) {
                 mSelected.add(position);
             } else {
