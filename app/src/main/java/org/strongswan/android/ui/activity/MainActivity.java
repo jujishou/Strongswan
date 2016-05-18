@@ -35,6 +35,7 @@ import android.support.v7.app.ActionBar;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.app.AppCompatDialogFragment;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -118,15 +119,16 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 
     /**
      * Due to launchMode=singleTop ，this is called if the Activity already exists
-     * 由于这是单例启动模式，该方法将在已经启动了，再次启动时调用
+     * 由于这是单例启动模式，该方法将在已经启动了，再次启动时调用onNewIntent，不启动onCreate
      */
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
+        Log.i("tag==", "onNewIntent is run");
         //// TODO: 2016/5/17 不懂
-        if (START_PROFILE.equals(intent.getAction())) {
-            startVpnProfile1(intent);
-        }
+//        if (START_PROFILE.equals(intent.getAction())) {
+//            startVpnProfile1(intent);
+//        }
     }
 
     @Override
@@ -175,7 +177,7 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
                 startActivityForResult(intent, PREPARE_VPN_SERVICE);
             } catch (ActivityNotFoundException ex) {
                 /* it seems some devices, even though they come with Android 4,
-				 * don't have the VPN components built into the system image.
+                 * don't have the VPN components built into the system image.
 				 * com.android.vpndialogs/com.android.vpndialogs.ConfirmDialog
 				 * will not be found then */
                 VpnNotSupportedError.showWithMessage(this, R.string.vpn_not_supported);
@@ -203,7 +205,7 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
     /**
      * 当点击item时执行的操作
      *
-     * @param profile
+     * @param profile 配置文件
      */
     @Override
     public void onVpnProfileSelected(VpnProfile profile) {
@@ -214,7 +216,7 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
         profileInfo.putBoolean(PROFILE_REQUIRES_PASSWORD, profile.getVpnType().has(VpnTypeFeature.USER_PASS));//4
         profileInfo.putString(PROFILE_NAME, profile.getName());//5配置名
 
-        removeFragmentByTag(DIALOG_TAG);
+        removeDialogFragmentByTag(DIALOG_TAG);
 
         //重连
         if (mService != null && (mService.getState() == State.CONNECTED || mService.getState() == State.CONNECTING)) {
@@ -298,7 +300,7 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
     /**
      * Dismiss dialog if shown
      */
-    public void removeFragmentByTag(String tag) {
+    public void removeDialogFragmentByTag(String tag) {
         FragmentManager fm = getSupportFragmentManager();
         Fragment login = fm.findFragmentByTag(tag);
         if (login != null) {

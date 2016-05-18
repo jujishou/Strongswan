@@ -21,14 +21,8 @@ import android.support.v4.app.ListFragment;
 import android.support.v4.app.LoaderManager.LoaderCallbacks;
 import android.support.v4.content.AsyncTaskLoader;
 import android.support.v4.content.Loader;
-import android.text.TextUtils;
-import android.view.Menu;
-import android.view.MenuInflater;
-import android.view.MenuItem;
 import android.view.View;
 import android.widget.ListView;
-import android.widget.SearchView;
-import android.widget.SearchView.OnQueryTextListener;
 
 import org.strongswan.android.R;
 import org.strongswan.android.logic.TrustedCertificateManager;
@@ -45,7 +39,8 @@ import java.util.Map.Entry;
 import java.util.Observable;
 import java.util.Observer;
 
-public class TrustedCertificateListFragment extends ListFragment implements LoaderCallbacks<List<TrustedCertificateEntry>>, OnQueryTextListener {
+public class TrustedCertificateListFragment extends ListFragment
+        implements LoaderCallbacks<List<TrustedCertificateEntry>> {
     public static final String EXTRA_CERTIFICATE_SOURCE = "certificate_source";
     private OnTrustedCertificateSelectedListener mListener;
     private TrustedCertificateAdapter mAdapter;
@@ -56,6 +51,15 @@ public class TrustedCertificateListFragment extends ListFragment implements Load
      */
     public interface OnTrustedCertificateSelectedListener {
         void onTrustedCertificateSelected(TrustedCertificateEntry selected);
+    }
+
+    @Override
+    public void onAttach(Context context) {
+        super.onAttach(context);
+
+        if (context instanceof OnTrustedCertificateSelectedListener) {
+            mListener = (OnTrustedCertificateSelectedListener) context;
+        }
     }
 
     @Override
@@ -78,45 +82,36 @@ public class TrustedCertificateListFragment extends ListFragment implements Load
         getLoaderManager().initLoader(0, null, this);
     }
 
+//    @Override
+//    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+//        MenuItem item = menu.add(R.string.search);
+//        item.setIcon(android.R.drawable.ic_menu_search);
+//        item.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM);
+//
+//        SearchView searchView = new SearchView(getActivity());
+//        searchView.setOnQueryTextListener(new OnQueryTextListener() {
+//            @Override
+//            public boolean onQueryTextSubmit(String query) {
+//                return true;
+//            }
+//
+//            @Override
+//            public boolean onQueryTextChange(String newText) {
+//                String search = TextUtils.isEmpty(newText) ? null : newText;
+//                mAdapter.getFilter().filter(search);
+//                return true;
+//            }
+//        });
+//        item.setActionView(searchView);
+//    }
+
+    //======================================================================================
+//======================================================================================
+//======================================================================================
+//======================================================================================
     @Override
-    public void onDestroy() {
-        super.onDestroy();
-    }
-
-    @Override
-    public void onAttach(Context context) {
-        super.onAttach(context);
-
-        if (context instanceof OnTrustedCertificateSelectedListener) {
-            mListener = (OnTrustedCertificateSelectedListener) context;
-        }
-    }
-
-    @Override
-    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
-        MenuItem item = menu.add(R.string.search);
-        item.setIcon(android.R.drawable.ic_menu_search);
-        item.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM);
-
-        SearchView sv = new SearchView(getActivity());
-        sv.setOnQueryTextListener(this);
-        item.setActionView(sv);
-    }
-
-    @Override
-    public boolean onQueryTextSubmit(String query) {	/* already handled when the text changes */
-        return true;
-    }
-
-    @Override
-    public boolean onQueryTextChange(String newText) {
-        String search = TextUtils.isEmpty(newText) ? null : newText;
-        mAdapter.getFilter().filter(search);
-        return true;
-    }
-
-    @Override
-    public Loader<List<TrustedCertificateEntry>> onCreateLoader(int id, Bundle args) {	/* we don't need the id as we have only one loader */
+    public Loader<List<TrustedCertificateEntry>> onCreateLoader(int id, Bundle args) {
+        /* we don't need the id as we have only one loader */
         return new CertificateListLoader(getActivity(), mSource);
     }
 
@@ -157,9 +152,8 @@ public class TrustedCertificateListFragment extends ListFragment implements Load
         public List<TrustedCertificateEntry> loadInBackground() {
             TrustedCertificateManager certman = TrustedCertificateManager.getInstance().load();
             Hashtable<String, X509Certificate> certificates = certman.getCACertificates(mSource);
-            List<TrustedCertificateEntry> selected;
 
-            selected = new ArrayList<>();
+            List<TrustedCertificateEntry> selected = new ArrayList<>();
             for (Entry<String, X509Certificate> entry : certificates.entrySet()) {
                 selected.add(new TrustedCertificateEntry(entry.getKey(), entry.getValue()));
             }

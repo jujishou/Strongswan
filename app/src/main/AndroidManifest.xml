@@ -41,14 +41,6 @@
             android:label="@string/remediation_instructions_title">
         </activity>
         <activity
-            android:name=".ui.activity.VpnProfileSelectActivity"
-            android:label="@string/strongswan_shortcut">
-            <intent-filter>
-                <action android:name="android.intent.action.CREATE_SHORTCUT"/>
-                <category android:name="android.intent.category.DEFAULT"/>
-            </intent-filter>
-        </activity>
-        <activity
             android:name=".ui.activity.TrustedCertificateImportActivity"
             android:label="@string/import_certificate"
             android:theme="@style/AlertDialogTheme">

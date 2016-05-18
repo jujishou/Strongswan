@@ -146,7 +146,7 @@ public class TrustedCertificatesActivity extends AppCompatActivity implements Tr
     }
 
     public static class TrustedCertificatesPagerAdapter extends FragmentPagerAdapter {
-        private TrustedCertificatesTab mTabs[];
+        private TrustedCertificatesTab[] mTabs;
 
         public TrustedCertificatesPagerAdapter(FragmentManager fm, Context context) {
             super(fm);
@@ -174,9 +174,9 @@ public class TrustedCertificatesActivity extends AppCompatActivity implements Tr
         @Override
         public Fragment getItem(int position) {
             TrustedCertificateListFragment fragment = new TrustedCertificateListFragment();
-            Bundle args = new Bundle();
-            args.putSerializable(TrustedCertificateListFragment.EXTRA_CERTIFICATE_SOURCE, mTabs[position].getSource());
-            fragment.setArguments(args);
+            Bundle bundle = new Bundle();
+            bundle.putSerializable(TrustedCertificateListFragment.EXTRA_CERTIFICATE_SOURCE, mTabs[position].getSource());
+            fragment.setArguments(bundle);
             return fragment;
         }
     }
