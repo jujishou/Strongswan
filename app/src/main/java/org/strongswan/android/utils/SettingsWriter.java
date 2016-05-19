@@ -33,8 +33,8 @@ public class SettingsWriter {
     /**
      * Set a string value
      *
-     * @param key
-     * @param value
+     * @param key   k
+     * @param value v
      * @return the writer
      */
     public SettingsWriter setValue(String key, String value) {
@@ -43,8 +43,7 @@ public class SettingsWriter {
             return this;
         }
         String[] keys = key.split("\\.");
-        SettingsSection section = mTop;
-        section = findOrCreateSection(Arrays.copyOfRange(keys, 0, keys.length - 1));
+        SettingsSection section = findOrCreateSection(Arrays.copyOfRange(keys, 0, keys.length - 1));
         section.Settings.put(keys[keys.length - 1], value);
         return this;
     }
@@ -52,8 +51,8 @@ public class SettingsWriter {
     /**
      * Set an integer value
      *
-     * @param key
-     * @param value
+     * @param key   k
+     * @param value v
      * @return the writer
      */
     public SettingsWriter setValue(String key, Integer value) {
@@ -63,8 +62,8 @@ public class SettingsWriter {
     /**
      * Set a boolean value
      *
-     * @param key
-     * @param value
+     * @param key   k
+     * @param value v
      * @return the writer
      */
     public SettingsWriter setValue(String key, Boolean value) {
@@ -86,8 +85,8 @@ public class SettingsWriter {
     /**
      * Serialize the settings in a section and recursively serialize sub-sections
      *
-     * @param section
-     * @param builder
+     * @param section s
+     * @param builder b
      */
     private void serializeSection(SettingsSection section, StringBuilder builder) {
         for (Entry<String, String> setting : section.Settings.entrySet()) {
@@ -108,8 +107,8 @@ public class SettingsWriter {
     /**
      * Escape value so it may be wrapped in "
      *
-     * @param value
-     * @return
+     * @param value v
+     * @return s
      */
     private String escapeValue(String value) {
         return value.replace("\"", "\\\"");
@@ -141,11 +140,11 @@ public class SettingsWriter {
         /**
          * Assigned key/value pairs
          */
-        LinkedHashMap<String, String> Settings = new LinkedHashMap<String, String>();
+        LinkedHashMap<String, String> Settings = new LinkedHashMap<>();
 
         /**
          * Assigned sub-sections
          */
-        LinkedHashMap<String, SettingsSection> Sections = new LinkedHashMap<String, SettingsWriter.SettingsSection>();
+        LinkedHashMap<String, SettingsSection> Sections = new LinkedHashMap<>();
     }
 }

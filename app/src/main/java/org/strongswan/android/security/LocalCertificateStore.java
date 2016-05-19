@@ -17,7 +17,7 @@ package org.strongswan.android.security;
 
 import android.content.Context;
 
-import org.strongswan.android.logic.StrongSwanApplication;
+import org.strongswan.android.StrongSwanApplication;
 import org.strongswan.android.utils.Utils;
 
 import java.io.File;
@@ -62,9 +62,7 @@ public class LocalCertificateStore {
             try {
                 out.write(cert.getEncoded());
                 return true;
-            } catch (CertificateEncodingException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
+            } catch (CertificateEncodingException | IOException e) {
                 e.printStackTrace();
             } finally {
                 try {

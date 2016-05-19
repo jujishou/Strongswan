@@ -197,7 +197,6 @@ public class TrustedCertificateImportActivity extends AppCompatActivity
 		public Dialog onCreateDialog(Bundle savedInstanceState)
 		{
 			final X509Certificate certificate;
-
 			certificate = (X509Certificate)getArguments().getSerializable(VpnProfileDataSource.KEY_CERTIFICATE);
 
 			return new AlertDialog.Builder(getActivity())

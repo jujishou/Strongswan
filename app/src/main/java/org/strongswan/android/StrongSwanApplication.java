@@ -13,7 +13,7 @@
  * for more details.
  */
 
-package org.strongswan.android.logic;
+package org.strongswan.android;
 
 import android.app.Application;
 import android.content.Context;
